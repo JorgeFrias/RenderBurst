@@ -152,6 +152,55 @@ class RenderBurst(bpy.types.Operator):
         #
         # I think the modality is what is making the function exit early, because in background mode there is no modal (no GUI).
 
+class RenderBurstBlocking(bpy.types.Operator):
+    """
+    Render all cameras but bloks the UI.
+    This function is intended to be used when using this functionality from a console call running in --Background mode.
+    """
+    bl_idname = "render.renderburstbloking"
+    bl_label = "Render Burst Bloking"
+
+    # Define some variables to register
+    shots = None
+    stop = None
+    rendering = None
+    path = "//"
+    disablerbbutton = False
+
+    def execute(self, context):
+        # Define the variables during execution. This allows
+        # to define when called from a button
+        self.stop = False
+        self.rendering = False
+        scene = bpy.context.scene
+        wm = bpy.context.window_manager
+        # Define the images/shots to render
+        self.shots = RenderingHelpers.imagesToRender()
+        
+        if len(self.shots) < 0:
+            self.report({"WARNING"}, 'No cameras defined')
+            return {"FINISHED"}        
+
+        for shot in self.shots:
+            # Render the files.
+            # Get the scene
+            scene = bpy.context.scene
+            # Configure the camera
+            scene.camera = bpy.data.objects[shot] 	
+
+            # Configure the file path
+            localPath = self.path
+            filePath = scene.render.filepath
+            scene.render.filepath = RenderingHelpers.renderPath(localPath, filePath, shot, scene.render.file_extension)
+
+            # Finally render the scene
+            print("- Rendering camera: " + shot)
+            bpy.ops.render.render("INVOKE_DEFAULT", write_still=True)
+
+        # Seems like we did all the renders.
+        return {"FINISHED"}
+
+
 # ui part
 class RbFilterSettings(bpy.types.PropertyGroup):
     rb_filter_enum: bpy.props.EnumProperty(
@@ -209,6 +258,7 @@ def menu_func(self, context):
 def register():
     from bpy.utils import register_class
     register_class(RenderBurst)
+    register_class(RenderBurstBlocking)
     register_class(RbFilterSettings)
     register_class(RenderBurstCamerasPanel)
     register_class(OBJECT_OT_RBButton)
@@ -218,6 +268,7 @@ def register():
 def unregister():
     from bpy.utils import unregister_class
     unregister_class(RenderBurst)
+    unregister_class(RenderBurstBlocking)
     bpy.types.TOPBAR_MT_render.remove(menu_func)
     unregister_class(RbFilterSettings)
     unregister_class(RenderBurstCamerasPanel)
