@@ -124,11 +124,11 @@ class RenderBurst(bpy.types.Operator):
 
         # This may prevent the rendering to run in the bakground when Blender is called from the command prompt.
         # The method can have other returns https://docs.blender.org/api/current/bpy.types.Operator.html#bpy.types.Operator.modal
-        # RUNNING_MODAL would prevent the rendering cancel, but could make the bakground call run?
+        # RUNNING_MODAL would prevent the rendering cancel, but could make the bakground call run? NO, does not change anything.
 
 # ui part
 class RbFilterSettings(bpy.types.PropertyGroup):
-    rb_filter_enum = bpy.props.EnumProperty(
+    rb_filter_enum: bpy.props.EnumProperty(
         name = "Filter",
         description = "Choose your destiny",
         items = [
