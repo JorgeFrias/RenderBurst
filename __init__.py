@@ -18,7 +18,7 @@ def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
 
     bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
-class RederingHelpers():
+class RenderingHelpers():
     # This class contains all functionality previously used in RenderBurst(bpy.types.Operator) so it can be reused.
     # shots = None
 
@@ -36,9 +36,31 @@ class RederingHelpers():
         return shots
 
     @staticmethod
-    def render(shot):
-        return
+    def renderPath(localPath, filePath, newFileName, fileExtension):
+        '''
+        Calculates the render path based on the parameters.
+        '''
+        is_relative_path = True
 
+        if filePath != "":
+            if filePath[0]+filePath[1] == "//":
+                is_relative_path = True
+                filePath = bpy.path.abspath(filePath)
+            else:
+                is_relative_path = False
+
+            localPath = os.path.dirname(filePath)
+
+            if is_relative_path:
+                localPath = bpy.path.relpath(localPath)
+
+            localPath = localPath.rstrip("/")
+            localPath = localPath.rstrip("\\")
+            if localPath=="":
+                localPath="/" 
+            localPath+="/"
+
+        return localPath + newFileName + fileExtension
 
 class RenderBurst(bpy.types.Operator):
     """Render all cameras"""
@@ -72,7 +94,7 @@ class RenderBurst(bpy.types.Operator):
         scene = bpy.context.scene
         wm = bpy.context.window_manager
         # Define the images/shots to render
-        self.shots = RederingHelpers.imagesToRender(onlySelected = wm.rb_filter.rb_filter_enum == 'selected')
+        self.shots = RenderingHelpers.imagesToRender(onlySelected = wm.rb_filter.rb_filter_enum == 'selected')
         
         if len(self.shots) < 0:
             self.report({"WARNING"}, 'No cameras defined')
@@ -111,27 +133,30 @@ class RenderBurst(bpy.types.Operator):
 
                 localPath = self.path
                 filePath = scene.render.filepath
-                is_relative_path = True
 
-                if filePath != "":
-                    if filePath[0]+filePath[1] == "//":
-                        is_relative_path = True
-                        filePath = bpy.path.abspath(filePath)
-                    else:
-                        is_relative_path = False
+                scene.render.filepath = RenderingHelpers.renderPath(localPath, filePath, self.shots[0], scene.render.file_extension)
 
-                    localPath = os.path.dirname(filePath)
+                # is_relative_path = True
 
-                    if is_relative_path:
-                        localPath = bpy.path.relpath(localPath)
+                # if filePath != "":
+                #     if filePath[0]+filePath[1] == "//":
+                #         is_relative_path = True
+                #         filePath = bpy.path.abspath(filePath)
+                #     else:
+                #         is_relative_path = False
 
-                    localPath = localPath.rstrip("/")
-                    localPath = localPath.rstrip("\\")
-                    if localPath=="":
-                        localPath="/" 
-                    localPath+="/"
+                #     localPath = os.path.dirname(filePath)
 
-                scene.render.filepath = localPath + self.shots[0] + scene.render.file_extension
+                #     if is_relative_path:
+                #         localPath = bpy.path.relpath(localPath)
+
+                #     localPath = localPath.rstrip("/")
+                #     localPath = localPath.rstrip("\\")
+                #     if localPath=="":
+                #         localPath="/" 
+                #     localPath+="/"
+
+                # scene.render.filepath = localPath + self.shots[0] + scene.render.file_extension
                 bpy.ops.render.render("INVOKE_DEFAULT", write_still=True)
 
         # This is very important! If we used "RUNNING_MODAL", this new modal function
