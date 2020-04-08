@@ -18,6 +18,27 @@ def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
 
     bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
+class RederingHelpers():
+    # This class contains all functionality previously used in RenderBurst(bpy.types.Operator) so it can be reused.
+    # shots = None
+
+    @staticmethod
+    def imagesToRender(onlySelected = False):
+        '''
+        Define the images/shots to render. Will get all visible cameras unless onlySelected = True.
+        '''
+        shots = None
+        if onlySelected:
+            shots = [ o.name+'' for o in bpy.context.selected_objects if o.type=='CAMERA' and o.visible_get() == True]
+        else:
+            shots = [ o.name+'' for o in bpy.context.visible_objects if o.type=='CAMERA' and o.visible_get() == True ]
+
+        return shots
+
+    @staticmethod
+    def render(shot):
+        return
+
 
 class RenderBurst(bpy.types.Operator):
     """Render all cameras"""
@@ -51,11 +72,8 @@ class RenderBurst(bpy.types.Operator):
         scene = bpy.context.scene
         wm = bpy.context.window_manager
         # Define the images/shots to render
-        if wm.rb_filter.rb_filter_enum == 'selected':
-            self.shots = [ o.name+'' for o in bpy.context.selected_objects if o.type=='CAMERA' and o.visible_get() == True]
-        else:
-            self.shots = [ o.name+'' for o in bpy.context.visible_objects if o.type=='CAMERA' and o.visible_get() == True ]
-
+        self.shots = RederingHelpers.imagesToRender(onlySelected = wm.rb_filter.rb_filter_enum == 'selected')
+        
         if len(self.shots) < 0:
             self.report({"WARNING"}, 'No cameras defined')
             return {"FINISHED"}        
@@ -88,32 +106,32 @@ class RenderBurst(bpy.types.Operator):
             # Nothing is currently rendering. Proceed to render.
             elif self.rendering is False: 
                                           
-                sc = bpy.context.scene
-                sc.camera = bpy.data.objects[self.shots[0]] 	
+                scene = bpy.context.scene
+                scene.camera = bpy.data.objects[self.shots[0]] 	
 
-                lpath = self.path
-                fpath = sc.render.filepath
+                localPath = self.path
+                filePath = scene.render.filepath
                 is_relative_path = True
 
-                if fpath != "":
-                    if fpath[0]+fpath[1] == "//":
+                if filePath != "":
+                    if filePath[0]+filePath[1] == "//":
                         is_relative_path = True
-                        fpath = bpy.path.abspath(fpath)
+                        filePath = bpy.path.abspath(filePath)
                     else:
                         is_relative_path = False
 
-                    lpath = os.path.dirname(fpath)
+                    localPath = os.path.dirname(filePath)
 
                     if is_relative_path:
-                        lpath = bpy.path.relpath(lpath)
+                        localPath = bpy.path.relpath(localPath)
 
-                    lpath = lpath.rstrip("/")
-                    lpath = lpath.rstrip("\\")
-                    if lpath=="":
-                        lpath="/" 
-                    lpath+="/"
+                    localPath = localPath.rstrip("/")
+                    localPath = localPath.rstrip("\\")
+                    if localPath=="":
+                        localPath="/" 
+                    localPath+="/"
 
-                sc.render.filepath = lpath + self.shots[0] + sc.render.file_extension
+                scene.render.filepath = localPath + self.shots[0] + scene.render.file_extension
                 bpy.ops.render.render("INVOKE_DEFAULT", write_still=True)
 
         # This is very important! If we used "RUNNING_MODAL", this new modal function
