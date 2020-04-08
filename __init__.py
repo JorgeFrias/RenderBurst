@@ -24,6 +24,7 @@ class RenderBurst(bpy.types.Operator):
     bl_idname = "render.renderburst"
     bl_label = "Render Burst"
 
+    # Define some variables to register
     _timer = None
     shots = None
     stop = None
@@ -35,6 +36,7 @@ class RenderBurst(bpy.types.Operator):
         self.rendering = True
 
     def post(self, dummy, thrd = None):
+        # This is just to render the next image in another path
         self.shots.pop(0) 
         self.rendering = False
 
@@ -42,15 +44,17 @@ class RenderBurst(bpy.types.Operator):
         self.stop = True
 
     def execute(self, context):
+        # Define the variables during execution. This allows
+        # to define when called from a button
         self.stop = False
         self.rendering = False
         scene = bpy.context.scene
         wm = bpy.context.window_manager
+        # Define the images/shots to render
         if wm.rb_filter.rb_filter_enum == 'selected':
             self.shots = [ o.name+'' for o in bpy.context.selected_objects if o.type=='CAMERA' and o.visible_get() == True]
         else:
             self.shots = [ o.name+'' for o in bpy.context.visible_objects if o.type=='CAMERA' and o.visible_get() == True ]
-
 
         if len(self.shots) < 0:
             self.report({"WARNING"}, 'No cameras defined')
@@ -60,22 +64,28 @@ class RenderBurst(bpy.types.Operator):
         bpy.app.handlers.render_post.append(self.post)
         bpy.app.handlers.render_cancel.append(self.cancelled)
 
+        # The timer gets created and the modal handler is added to the window manager
         self._timer = bpy.context.window_manager.event_timer_add(0.5, window=bpy.context.window)
         bpy.context.window_manager.modal_handler_add(self)
 
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
+        # This event is signaled every half a second and will start the render if available
         if event.type == 'TIMER':
-
+            
+            # If cancelled or no more shots to render, finish.
             if True in (not self.shots, self.stop is True): 
+                # We remove the handlers and the modal timer to clean everything
                 bpy.app.handlers.render_pre.remove(self.pre)
                 bpy.app.handlers.render_post.remove(self.post)
                 bpy.app.handlers.render_cancel.remove(self.cancelled)
                 bpy.context.window_manager.event_timer_remove(self._timer)
 
+                # I didn't separate the cancel and finish events, because in my case I don't need to, but you can create them as you need
                 return {"FINISHED"} 
 
+            # Nothing is currently rendering. Proceed to render.
             elif self.rendering is False: 
                                           
                 sc = bpy.context.scene
@@ -106,7 +116,15 @@ class RenderBurst(bpy.types.Operator):
                 sc.render.filepath = lpath + self.shots[0] + sc.render.file_extension
                 bpy.ops.render.render("INVOKE_DEFAULT", write_still=True)
 
+        # This is very important! If we used "RUNNING_MODAL", this new modal function
+        # would prevent the use of the X button to cancel rendering, because this
+        # button is managed by the modal function of the render operator,
+        # not this new operator!
         return {"PASS_THROUGH"}
+
+        # This may prevent the rendering to run in the bakground when Blender is called from the command prompt.
+        # The method can have other returns https://docs.blender.org/api/current/bpy.types.Operator.html#bpy.types.Operator.modal
+        # RUNNING_MODAL would prevent the rendering cancel, but could make the bakground call run?
 
 # ui part
 class RbFilterSettings(bpy.types.PropertyGroup):
