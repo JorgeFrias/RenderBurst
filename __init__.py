@@ -127,36 +127,17 @@ class RenderBurst(bpy.types.Operator):
 
             # Nothing is currently rendering. Proceed to render.
             elif self.rendering is False: 
-                                          
+                # Get the scene
                 scene = bpy.context.scene
+                # Configure the camera
                 scene.camera = bpy.data.objects[self.shots[0]] 	
 
+                # Configure the file path
                 localPath = self.path
                 filePath = scene.render.filepath
-
                 scene.render.filepath = RenderingHelpers.renderPath(localPath, filePath, self.shots[0], scene.render.file_extension)
 
-                # is_relative_path = True
-
-                # if filePath != "":
-                #     if filePath[0]+filePath[1] == "//":
-                #         is_relative_path = True
-                #         filePath = bpy.path.abspath(filePath)
-                #     else:
-                #         is_relative_path = False
-
-                #     localPath = os.path.dirname(filePath)
-
-                #     if is_relative_path:
-                #         localPath = bpy.path.relpath(localPath)
-
-                #     localPath = localPath.rstrip("/")
-                #     localPath = localPath.rstrip("\\")
-                #     if localPath=="":
-                #         localPath="/" 
-                #     localPath+="/"
-
-                # scene.render.filepath = localPath + self.shots[0] + scene.render.file_extension
+                # Finally render the scene
                 bpy.ops.render.render("INVOKE_DEFAULT", write_still=True)
 
         # This is very important! If we used "RUNNING_MODAL", this new modal function
@@ -168,6 +149,8 @@ class RenderBurst(bpy.types.Operator):
         # This may prevent the rendering to run in the bakground when Blender is called from the command prompt.
         # The method can have other returns https://docs.blender.org/api/current/bpy.types.Operator.html#bpy.types.Operator.modal
         # RUNNING_MODAL would prevent the rendering cancel, but could make the bakground call run? NO, does not change anything.
+        #
+        # I think the modality is what is making the function exit early, because in background mode there is no modal (no GUI).
 
 # ui part
 class RbFilterSettings(bpy.types.PropertyGroup):
